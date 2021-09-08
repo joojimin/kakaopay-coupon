@@ -1,86 +1,85 @@
 package com.kakaopay.coupon.controller;
 
-import com.kakaopay.coupon.model.Coupon;
-import com.kakaopay.coupon.service.CouponService;
-import lombok.extern.slf4j.Slf4j;
-import org.junit.Before;
-import org.junit.Test;
-import org.junit.runner.RunWith;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.boot.test.web.client.TestRestTemplate;
-import org.springframework.http.*;
-import org.springframework.test.context.junit4.SpringRunner;
-
-import java.util.HashMap;
-import java.util.Map;
-
 import static org.assertj.core.api.Assertions.assertThat;
 
-@Slf4j
-@RunWith(SpringRunner.class)
-@SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
-public class CouponControllerTest {
+import com.kakaopay.coupon.AcceptanceTest;
+import com.kakaopay.coupon.model.Coupon;
+import com.kakaopay.coupon.model.dto.CouponCreateDTO;
+import io.restassured.RestAssured;
+import io.restassured.response.ExtractableResponse;
+import io.restassured.response.Response;
+import org.junit.Test;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 
-    private static boolean setUpIsDone = false;
+public class CouponControllerTest extends AcceptanceTest {
 
-    @Autowired
-    private TestRestTemplate restTemplate;
+    @Test
+    public void 쿠폰_발급() {
+        // given
+        CouponCreateDTO request = new CouponCreateDTO("jimin.joo@naver.com");
 
-    @Autowired
-    private CouponService couponService;
+        // when
+        ExtractableResponse<Response> response = 쿠폰_발급_요청(request);
 
-    @Before
-    public void init() {
-        if (setUpIsDone) {
-            return;
-        }
-
-        Coupon dummy = couponService.create("1@gmail.com");
-        log.info("dummy: " + dummy);
-
-        Coupon checkDummy = couponService.get(1L);
-        log.info("check dummy: " + checkDummy);
-        assertThat(checkDummy).isNotNull();
-
-        setUpIsDone = true;
+        // then
+        쿠폰_발급_성공(response);
     }
 
     @Test
-    public void getCoupon() throws Exception {
-        ResponseEntity<Coupon> response = restTemplate.getForEntity("/api/v1/coupon/1", Coupon.class);
-        log.info("getCoupon API: " + response);
-        assertThat(response).isNotNull();
-        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
-        assertThat(response.getBody().getEmail()).isEqualTo("1@gmail.com");
+    public void 쿠폰_조회() {
+        // given
+        Coupon expected = 쿠폰_발급_성공(쿠폰_발급_요청(new CouponCreateDTO("jimin.joo@nhnsoft.com")));
+
+        // when
+        ExtractableResponse<Response> response = 쿠폰_조회_요청(expected.getId());
+
+        // then
+        쿠폰_조회_성공_JsonPath(response, expected);
     }
 
-    @Test
-    public void getCouponListWithPage() throws Exception {
-        ResponseEntity<String> response = restTemplate.getForEntity("/api/v1/coupon", String.class);
-        log.info("getCouponListWithPage API: " + response);
-        assertThat(response).isNotNull();
-        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
-
-        // One element is created at @Before
-        assertThat(response.getBody()).contains("\"totalElements\":1");
+    public static ExtractableResponse<Response> 쿠폰_발급_요청(final CouponCreateDTO request) {
+        return RestAssured
+            .given()
+                .log().all()
+                .body(request)
+                .contentType(MediaType.APPLICATION_JSON_VALUE)
+            .when()
+                .post("/api/v1/coupon")
+            .then()
+                .log().all()
+                .extract();
     }
 
-    @Test
-    public void createCoupon() throws Exception {
-        HttpHeaders headers = new HttpHeaders();
-        headers.setContentType(MediaType.APPLICATION_JSON_UTF8);
+    public static Coupon 쿠폰_발급_성공(ExtractableResponse<Response> response) {
+        assertThat(response.statusCode()).isEqualTo(HttpStatus.CREATED.value());
 
-        Map<String, String> map = new HashMap<>();
-        String email = "2@gmail.com";
-        map.put("email", email);
+        return response.as(Coupon.class);
+    }
 
-        HttpEntity<Map<String, String>> request = new HttpEntity<>(map, headers);
+    public static ExtractableResponse<Response> 쿠폰_조회_요청(final Long id) {
+        // when
+        return RestAssured
+                .given()
+                    .log().all()
+                .when()
+                    .get("/api/v1/coupon/" + id)
+                .then()
+                    .log().all()
+                    .extract();
+    }
 
-        ResponseEntity<Coupon> response = restTemplate.postForEntity("/api/v1/coupon", request, Coupon.class);
-        log.info("createCoupon API: " + response);
-        assertThat(response).isNotNull();
-        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.CREATED);
-        assertThat(response.getBody().getEmail()).isEqualTo(email);
+    public static void 쿠폰_조회_성공(ExtractableResponse<Response> response, Coupon expected) {
+        assertThat(response.statusCode()).isEqualTo(HttpStatus.OK.value());
+
+        Coupon actual = response.as(Coupon.class);
+        assertThat(actual.getId()).isEqualTo(expected.getId());
+        assertThat(actual.getEmail()).isEqualTo(expected.getEmail());
+    }
+
+    public static void 쿠폰_조회_성공_JsonPath(ExtractableResponse<Response> response, Coupon expected) {
+        assertThat(response.statusCode()).isEqualTo(HttpStatus.OK.value());
+        assertThat(response.jsonPath().getLong("id")).isEqualTo(expected.getId());
+        assertThat(response.jsonPath().getString("email")).isEqualTo(expected.getEmail());
     }
 }
