@@ -5,6 +5,7 @@ import com.kakaopay.coupon.core.CodeGenerator;
 import com.kakaopay.coupon.error.exception.*;
 import com.kakaopay.coupon.model.Coupon;
 import com.kakaopay.coupon.repository.CouponRepository;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
@@ -14,14 +15,12 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
 
 @Slf4j
+@RequiredArgsConstructor
 @Service
 public class CouponService {
 
-    @Autowired
-    private CouponRepository couponRepo;
-
-    @Autowired
-    private CodeGenerator codeGenerator;
+    private final CouponRepository couponRepo;
+    private final CodeGenerator codeGenerator;
 
     private static final int TRY_COUNT_IN_COLLISION = 5;
 
@@ -69,7 +68,7 @@ public class CouponService {
         return coupon;
     }
 
-    @Transactional(readOnly = true)
+//    @Transactional(readOnly = true)
     private String generateUniqueCode() {
         int tryCount = TRY_COUNT_IN_COLLISION;
         String code = null;

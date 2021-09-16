@@ -1,27 +1,24 @@
 package com.kakaopay.coupon.controller;
 
 import com.kakaopay.coupon.model.dto.CouponCreateDTO;
-import com.kakaopay.coupon.error.exception.InvalidEmailException;
 import com.kakaopay.coupon.model.Coupon;
 import com.kakaopay.coupon.service.CouponService;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
-import org.springframework.validation.BindingResult;
-import org.springframework.validation.ObjectError;
 import org.springframework.web.bind.annotation.*;
 
 import javax.validation.Valid;
 
 @Slf4j
+@RequiredArgsConstructor
 @RestController
 @RequestMapping("/api/v1")
 public class CouponController {
 
-    @Autowired
-    private CouponService couponService;
+    private final CouponService couponService;
 
     @ResponseStatus(HttpStatus.OK)
     @RequestMapping(value = "/coupon/{id}", method = RequestMethod.GET)
@@ -38,15 +35,7 @@ public class CouponController {
 
     @ResponseStatus(HttpStatus.CREATED)
     @RequestMapping(value = "/coupon", method = RequestMethod.POST, consumes = "application/json; charset=UTF-8")
-    public Coupon createCoupon(@RequestBody @Valid CouponCreateDTO couponCreateDTO, BindingResult error) {
-        if (error.hasErrors()) {
-            for (ObjectError err :error.getAllErrors()) {
-                if (InvalidEmailException.errorCode.equals(err.getDefaultMessage())) {
-                    log.info("CouponController - createCoupon : invalid email");
-                    throw new InvalidEmailException("Fail to create Coupon. Email format is invalid.");
-                }
-            }
-        }
+    public Coupon createCoupon(@RequestBody @Valid CouponCreateDTO couponCreateDTO) {
         return couponService.create(couponCreateDTO);
     }
 }

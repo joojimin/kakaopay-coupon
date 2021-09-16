@@ -17,7 +17,7 @@ public class CouponControllerTest extends AcceptanceTest {
     @Test
     public void 쿠폰_발급() {
         // given
-        CouponCreateDTO request = new CouponCreateDTO("jimin.joo@naver.com");
+        CouponCreateDTO request = new CouponCreateDTO("jimin.joo@@naver.com");
 
         // when
         ExtractableResponse<Response> response = 쿠폰_발급_요청(request);
@@ -36,6 +36,21 @@ public class CouponControllerTest extends AcceptanceTest {
 
         // then
         쿠폰_조회_성공_JsonPath(response, expected);
+    }
+
+    @Test
+    public void 쿠폰_리스트_조회() {
+        // given
+        쿠폰_발급_성공(쿠폰_발급_요청(new CouponCreateDTO("jimin.joo1@nhnsoft.com")));
+        쿠폰_발급_성공(쿠폰_발급_요청(new CouponCreateDTO("jimin.joo2@nhnsoft.com")));
+        Coupon expected = 쿠폰_발급_성공(쿠폰_발급_요청(new CouponCreateDTO("jimin.joo3@nhnsoft.com")));
+
+        // when
+        ExtractableResponse<Response> response = 쿠폰_리스트_조회_요청(2, 1);
+
+        // then
+        쿠폰_리스트_조회_성공(response, 3, 1);
+        assertThat(response.jsonPath().getLong("content[0].id")).isEqualTo(expected.getId());
     }
 
     public static ExtractableResponse<Response> 쿠폰_발급_요청(final CouponCreateDTO request) {
@@ -63,7 +78,7 @@ public class CouponControllerTest extends AcceptanceTest {
                 .given()
                     .log().all()
                 .when()
-                    .get("/api/v1/coupon/" + id)
+                    .get("/api/v1/coupon/{id}", id)
                 .then()
                     .log().all()
                     .extract();
@@ -81,5 +96,28 @@ public class CouponControllerTest extends AcceptanceTest {
         assertThat(response.statusCode()).isEqualTo(HttpStatus.OK.value());
         assertThat(response.jsonPath().getLong("id")).isEqualTo(expected.getId());
         assertThat(response.jsonPath().getString("email")).isEqualTo(expected.getEmail());
+    }
+
+
+    public static ExtractableResponse<Response> 쿠폰_리스트_조회_요청(final int size, final int page) {
+        // when
+        return RestAssured
+                .given()
+                    .log().all()
+                    .param("size", size)
+                    .param("page", page)
+                .when()
+                    .get("/api/v1/coupon")
+                .then()
+                    .log().all()
+                    .extract();
+    }
+
+
+    public static void 쿠폰_리스트_조회_성공(ExtractableResponse<Response> response, int totalElements, int numberOfElements) {
+        assertThat(response.statusCode()).isEqualTo(HttpStatus.OK.value());
+
+        assertThat(response.jsonPath().getInt("totalElements")).isEqualTo(totalElements);
+        assertThat(response.jsonPath().getInt("numberOfElements")).isEqualTo(numberOfElements);
     }
 }
